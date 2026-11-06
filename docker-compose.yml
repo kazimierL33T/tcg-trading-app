@@ -1,0 +1,29 @@
+# =============================================================================
+# docker looks for a yaml file named docker-compose.yml to spin up the stack.
+# =============================================================================
+
+services:
+  # Our database service is postgres 16 with pg vector pre installed. This way docker wont have 
+  db:
+    image: pgvector/pgvector:pg16
+    # reads the postgres password from the .env file
+    env_file: .env
+    #expose port 5432 so tools on the host machine so DBeaver can connect
+    ports:
+    - "5432:5432"
+    volumes:
+    # Named volume = data that survives containerr restarts and deletions.
+    - pgdata:/var/lib/postgresql/data
+    # Any .sql file here runs ONCE, only when the volume is empty.
+    - ./db/init:/docker-entrypoint-initdb.d
+    # Lets other services wait until postgres actually accepts connections.
+    # $$ escapes $ so compose passes it to the container's shell.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+# Declares the named volume used by the db service. This is where postgres stores its data.
+volumes:
+  pgdata:
